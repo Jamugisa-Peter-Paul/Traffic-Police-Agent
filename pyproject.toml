@@ -9,4 +9,5 @@ dependencies = [
     "numpy<2",
     "opencv-contrib-python==4.8.0.76",
     "opencv-python==4.8.0.76",
+    "python-dotenv>=1.2.1",
 ]

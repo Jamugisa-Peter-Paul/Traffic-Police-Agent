@@ -1,6 +1,8 @@
 import os
+from dotenv import load_dotenv
 
-# Camera Configuration
+load_dotenv()
+
 # Camera Configuration
 # Priority:
 # 1. IP_CAMERA_URL (Full URL)

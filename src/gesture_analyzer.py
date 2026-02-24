@@ -47,24 +47,26 @@ class GestureAnalyzer:
         # Check arms positions relative to shoulder height
         # Note: y coordinate increases downwards
         
-        # Check for STOP: Arms extended horizontally
+        # Check for GO: Arms extended horizontally (T-position)
         # Wrists and elbows roughly at shoulder level
         # Tolerance in pixels
         y_tol = 60
         left_horizontal = abs(l_wrist[2] - l_shldr[2]) < y_tol and abs(l_elbow[2] - l_shldr[2]) < y_tol
         right_horizontal = abs(r_wrist[2] - r_shldr[2]) < y_tol and abs(r_elbow[2] - r_shldr[2]) < y_tol
 
-        if left_horizontal and right_horizontal:
-            self.current_state = "STOP"
+        # If either arm is extended horizontally, it's GO
+        if left_horizontal or right_horizontal:
+            self.current_state = "GO"
             return self.current_state
 
-        # Check for GO: One arm up or waving
+        # Check for STOP: Palm up (Hand raised vertically)
         # Simplified: If wrist is significantly above shoulder
         left_up = l_wrist[2] < (l_shldr[2] - 50)
         right_up = r_wrist[2] < (r_shldr[2] - 50)
 
+        # If either hand is raised, it's STOP
         if left_up or right_up:
-             self.current_state = "GO"
+             self.current_state = "STOP"
              return self.current_state
 
         self.current_state = "NEUTRAL"
