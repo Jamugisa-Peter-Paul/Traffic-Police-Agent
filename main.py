@@ -1,10 +1,11 @@
 import cv2
 import time
-from config import IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME
+from config import IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME, JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD
 from src.camera import Camera
 from src.detector import PoseDetector
 from src.gesture_analyzer import GestureAnalyzer
 from src.traffic_light import TrafficLight
+from src.jacket_detector import SafetyJacketDetector
 
 def main():
     # Determine source: Priority to IP Camera if set
@@ -21,24 +22,32 @@ def main():
     detector = PoseDetector()
     analyzer = GestureAnalyzer()
     traffic_light = TrafficLight()
+    jacket_detector = SafetyJacketDetector(model_path=JACKET_MODEL_PATH, conf_threshold=JACKET_CONFIDENCE_THRESHOLD)
 
     while True:
         frame = cam.read()
 
         if frame is not None:
-            # 1. Detect Pose
-            frame = detector.find_pose(frame)
-            lmList = detector.get_position(frame, draw=False)
+            # 0. Detect Safety Jacket
+            has_jacket, bbox, frame = jacket_detector.detect(frame)
 
-            # 2. Analyze Gesture
-            gesture = analyzer.analyze(lmList)
+            if has_jacket:
+                # 1. Detect Pose
+                frame = detector.find_pose(frame)
+                lmList = detector.get_position(frame, draw=False)
+
+                # 2. Analyze Gesture
+                gesture = analyzer.analyze(lmList)
+            else:
+                gesture = "NO JACKET DETECTED"
 
             # 3. Update Traffic Light
             light_state = traffic_light.set_state(gesture)
 
             # 4. Visualization
             # Draw Status Text
-            cv2.putText(frame, f"Gesture: {gesture}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+            text_color = (255, 255, 0) if has_jacket else (0, 0, 255)
+            cv2.putText(frame, f"Gesture: {gesture}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, text_color, 2)
             
             # Draw Traffic Light Indicator (Circle in top right)
             h, w, c = frame.shape

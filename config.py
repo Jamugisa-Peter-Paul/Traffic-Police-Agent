@@ -33,3 +33,8 @@ WINDOW_NAME = "Traffic Officer Agent"
 # Detection Thresholds
 DETECTION_CONFIDENCE = 0.5
 TRACKING_CONFIDENCE = 0.5
+
+# Safety Jacket Detection
+JACKET_MODEL_PATH = "models/best_jacket.pt"  # Change this to your downloaded model weights
+JACKET_CONFIDENCE_THRESHOLD = 0.5
+
