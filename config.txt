@@ -1,0 +1,16 @@
+# Camera Credentials
+CAMERA_USERNAME=
+CAMERA_PASSWORD=
+CAMERA_IP=http://1.1.1.1:80800/video
+CAMERA_STREAM_PATH=stream1
+
+# Override IP Camera URL (Leave empty to use the constructed URL above)
+IP_CAMERA_URL=rtsp://admin:admin@11.1.1.1:8080/h264_pcm.sdp
+
+# Detection Thresholds (Optional)
+DETECTION_CONFIDENCE=0.5
+TRACKING_CONFIDENCE=0.5
+
+#DEVICE_MODE=cpu     force CPU
+#DEVICE_MODE=gpu     force GPU (falls back to CPU if unavailable)
+DEVICE_MODE=auto   # auto-detect (default)

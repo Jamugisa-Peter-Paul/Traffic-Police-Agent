@@ -1,9 +1,48 @@
 import os
+import torch
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Camera Configuration
+# ─── Device & Performance Mode ───────────────────────────────────────────────
+# Auto-detect: uses GPU (CUDA/MPS) if available, otherwise falls back to CPU.
+# You can override by setting DEVICE_MODE=cpu or DEVICE_MODE=gpu in .env
+
+def _detect_device():
+    """Auto-detect the best available device."""
+    override = os.getenv("DEVICE_MODE", "auto").lower()
+    if override == "cpu":
+        return "cpu"
+    if override == "gpu":
+        if torch.cuda.is_available():
+            return "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+        print("Warning: GPU requested but not available. Falling back to CPU.")
+        return "cpu"
+    # Auto mode
+    if torch.cuda.is_available():
+        return "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+DEVICE = _detect_device()
+IS_GPU = DEVICE in ("cuda", "mps")
+
+# Performance settings tuned per device
+if IS_GPU:
+    JACKET_IMGSZ = 640          # Full resolution for GPU
+    DETECT_EVERY_N_FRAMES = 1   # Every frame on GPU
+    JACKET_CONFIDENCE_THRESHOLD = 0.4
+else:
+    JACKET_IMGSZ = 320          # Half resolution for CPU speed
+    DETECT_EVERY_N_FRAMES = 5   # Skip frames on CPU
+    JACKET_CONFIDENCE_THRESHOLD = 0.25
+
+print(f"⚡ Device: {DEVICE.upper()} | imgsz={JACKET_IMGSZ} | skip={DETECT_EVERY_N_FRAMES} | conf={JACKET_CONFIDENCE_THRESHOLD}")
+
+# ─── Camera Configuration ────────────────────────────────────────────────────
 # Priority:
 # 1. IP_CAMERA_URL (Full URL)
 # 2. Constructed URL from CAMERA_IP, CAMERA_USERNAME, CAMERA_PASSWORD
@@ -27,14 +66,12 @@ if not IP_CAMERA_URL and CAMERA_IP:
 
 WEBCAM_INDEX = 0
 
-# Window Configuration
+# ─── Window Configuration ────────────────────────────────────────────────────
 WINDOW_NAME = "Traffic Officer Agent"
 
-# Detection Thresholds
+# ─── Pose Detection Thresholds ───────────────────────────────────────────────
 DETECTION_CONFIDENCE = 0.5
 TRACKING_CONFIDENCE = 0.5
 
-# Safety Jacket Detection
-JACKET_MODEL_PATH = "models/best_jacket.pt"  # Change this to your downloaded model weights
-JACKET_CONFIDENCE_THRESHOLD = 0.15
-
+# ─── Safety Jacket Detection ─────────────────────────────────────────────────
+JACKET_MODEL_PATH = "models/best_jacket.pt"

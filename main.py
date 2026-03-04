@@ -1,6 +1,10 @@
 import cv2
 import time
-from config import IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME, JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD
+from config import (
+    IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME,
+    JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD,
+    DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES
+)
 from src.camera import Camera
 from src.detector import PoseDetector
 from src.gesture_analyzer import GestureAnalyzer
@@ -22,13 +26,20 @@ def main():
     detector = PoseDetector()
     analyzer = GestureAnalyzer()
     traffic_light = TrafficLight()
-    jacket_detector = SafetyJacketDetector(model_path=JACKET_MODEL_PATH, conf_threshold=JACKET_CONFIDENCE_THRESHOLD)
+    jacket_detector = SafetyJacketDetector(
+        model_path=JACKET_MODEL_PATH,
+        conf_threshold=JACKET_CONFIDENCE_THRESHOLD,
+        device=DEVICE,
+        imgsz=JACKET_IMGSZ
+    )
 
-    # Performance: only run jacket detection every N frames to keep video smooth on CPU
-    DETECT_EVERY_N = 3
+    # Frame skipping (loaded from config — CPU skips more, GPU processes every frame)
     frame_count = 0
     cached_has_jacket = False
     cached_bbox = None
+
+    # FPS counter
+    prev_time = time.time()
 
     while True:
         frame = cam.read()
@@ -36,8 +47,8 @@ def main():
         if frame is not None:
             frame_count += 1
 
-            # 0. Detect Safety Jacket (only every Nth frame for speed)
-            if frame_count % DETECT_EVERY_N == 0:
+            # 0. Detect Safety Jacket (skip frames on CPU for speed)
+            if frame_count % DETECT_EVERY_N_FRAMES == 0:
                 has_jacket, bbox, frame = jacket_detector.detect(frame)
                 cached_has_jacket = has_jacket
                 cached_bbox = bbox
@@ -65,9 +76,16 @@ def main():
             light_state = traffic_light.set_state(gesture)
 
             # 4. Visualization
+            # FPS counter
+            curr_time = time.time()
+            fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0
+            prev_time = curr_time
+
             # Draw Status Text
             text_color = (255, 255, 0) if has_jacket else (0, 0, 255)
             cv2.putText(frame, f"Gesture: {gesture}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, text_color, 2)
+            cv2.putText(frame, f"FPS: {fps:.1f} | {DEVICE.upper()}", (10, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
             
             # Draw Traffic Light Indicator (Circle in top right)
             h, w, c = frame.shape
