@@ -36,5 +36,5 @@ TRACKING_CONFIDENCE = 0.5
 
 # Safety Jacket Detection
 JACKET_MODEL_PATH = "models/best_jacket.pt"  # Change this to your downloaded model weights
-JACKET_CONFIDENCE_THRESHOLD = 0.5
+JACKET_CONFIDENCE_THRESHOLD = 0.15
 

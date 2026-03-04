@@ -24,12 +24,32 @@ def main():
     traffic_light = TrafficLight()
     jacket_detector = SafetyJacketDetector(model_path=JACKET_MODEL_PATH, conf_threshold=JACKET_CONFIDENCE_THRESHOLD)
 
+    # Performance: only run jacket detection every N frames to keep video smooth on CPU
+    DETECT_EVERY_N = 3
+    frame_count = 0
+    cached_has_jacket = False
+    cached_bbox = None
+
     while True:
         frame = cam.read()
 
         if frame is not None:
-            # 0. Detect Safety Jacket
-            has_jacket, bbox, frame = jacket_detector.detect(frame)
+            frame_count += 1
+
+            # 0. Detect Safety Jacket (only every Nth frame for speed)
+            if frame_count % DETECT_EVERY_N == 0:
+                has_jacket, bbox, frame = jacket_detector.detect(frame)
+                cached_has_jacket = has_jacket
+                cached_bbox = bbox
+            else:
+                has_jacket = cached_has_jacket
+                bbox = cached_bbox
+                # Still draw cached bbox if we have one
+                if bbox is not None:
+                    x1, y1, x2, y2 = map(int, bbox)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
+                    cv2.putText(frame, "Safety Jacket", (x1, y1 - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
             if has_jacket:
                 # 1. Detect Pose

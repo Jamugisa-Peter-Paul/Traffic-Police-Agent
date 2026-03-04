@@ -49,8 +49,16 @@ class SafetyJacketDetector:
             return True, None, frame
 
         # Run inference
-        results = self.model(frame, conf=self.conf_threshold, verbose=False)
+        results = self.model(frame, conf=self.conf_threshold, imgsz=320, verbose=False)
         annotated_frame = frame.copy()
+        
+        # Debug: print detection info
+        for r in results:
+            if len(r.boxes) > 0:
+                scores = [f"{b.conf[0].item():.2f}" for b in r.boxes]
+                print(f"[JACKET DEBUG] Found {len(r.boxes)} detections, scores: {scores}")
+            else:
+                print("[JACKET DEBUG] No detections in this frame", end='\r')
         
         has_jacket = False
         best_bbox = None
