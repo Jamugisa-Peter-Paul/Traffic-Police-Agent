@@ -3,7 +3,8 @@ import time
 from config import (
     IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME,
     JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD,
-    DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES
+    DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES,
+    HARDWARE_ENABLED, ESP8266_IP, ESP8266_PORT
 )
 from src.camera import Camera
 from src.detector import PoseDetector
@@ -41,6 +42,15 @@ def main():
     # FPS counter
     prev_time = time.time()
 
+    # Initialize Hardware Bridge (ESP8266) if configured
+    bridge = None
+    if HARDWARE_ENABLED:
+        from src.hardware_bridge import HardwareBridge
+        print(f"Hardware mode enabled — connecting to ESP8266 at {ESP8266_IP}:{ESP8266_PORT}")
+        bridge = HardwareBridge(ESP8266_IP, ESP8266_PORT)
+    else:
+        print("Hardware mode disabled — set ESP8266_IP env variable to enable")
+
     while True:
         frame = cam.read()
 
@@ -72,10 +82,14 @@ def main():
             else:
                 gesture = "NO JACKET DETECTED"
 
-            # 3. Update Traffic Light
+            # 3. Update Traffic Light (software)
             light_state = traffic_light.set_state(gesture)
 
-            # 4. Visualization
+            # 4. Send to Hardware (ESP8266)
+            if bridge:
+                bridge.send_state(light_state, gesture)
+
+            # 5. Visualization
             # FPS counter
             curr_time = time.time()
             fps = 1 / (curr_time - prev_time) if (curr_time - prev_time) > 0 else 0
@@ -92,6 +106,12 @@ def main():
             light_color = traffic_light.get_color()
             cv2.circle(frame, (w - 50, 50), 30, light_color, cv2.FILLED)
             cv2.putText(frame, light_state, (w - 80, 100), cv2.FONT_HERSHEY_PLAIN, 1, light_color, 2)
+
+            # Draw hardware connection status
+            if bridge:
+                hw_status = "HW: Connected" if bridge.connected else "HW: Disconnected"
+                hw_color = (0, 255, 0) if bridge.connected else (0, 0, 255)
+                cv2.putText(frame, hw_status, (10, 85), cv2.FONT_HERSHEY_PLAIN, 1, hw_color, 2)
 
             cv2.imshow(WINDOW_NAME, frame)
 

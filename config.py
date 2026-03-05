@@ -1,3 +1,5 @@
+
+
 import os
 import torch
 from dotenv import load_dotenv
@@ -75,3 +77,10 @@ TRACKING_CONFIDENCE = 0.5
 
 # ─── Safety Jacket Detection ─────────────────────────────────────────────────
 JACKET_MODEL_PATH = "models/best_jacket.pt"
+
+# Hardware Configuration (ESP8266 Traffic Light)
+# Set ESP8266_IP env variable to enable hardware control
+# e.g.  set ESP8266_IP=192.168.1.50
+ESP8266_IP = os.getenv("ESP8266_IP", None)
+ESP8266_PORT = int(os.getenv("ESP8266_PORT", "80"))
+HARDWARE_ENABLED = ESP8266_IP is not None

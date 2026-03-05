@@ -41,7 +41,7 @@ class PoseDetector:
             for id, lm in enumerate(self.results.pose_landmarks.landmark):
                 h, w, c = frame.shape
                 cx, cy = int(lm.x * w), int(lm.y * h)
-                lmList.append([id, cx, cy])
+                lmList.append([id, cx, cy, getattr(lm, 'visibility', 1.0)])
                 if draw:
                     cv2.circle(frame, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
         return lmList
