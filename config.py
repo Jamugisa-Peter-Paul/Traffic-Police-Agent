@@ -50,12 +50,14 @@ print(f"⚡ Device: {DEVICE.upper()} | imgsz={JACKET_IMGSZ} | skip={DETECT_EVERY
 # 2. Constructed URL from CAMERA_IP, CAMERA_USERNAME, CAMERA_PASSWORD
 # 3. WEBCAM_INDEX (Fallback)
 
-CAMERA_USERNAME = os.getenv("CAMERA_USERNAME")
-CAMERA_PASSWORD = os.getenv("CAMERA_PASSWORD")
-CAMERA_IP = os.getenv("CAMERA_IP")
-CAMERA_STREAM_PATH = os.getenv("CAMERA_STREAM_PATH") # e.g. "stream1", "live"
+CAMERA_USERNAME = os.getenv("CAMERA_USERNAME", "").strip("'\"")
+CAMERA_PASSWORD = os.getenv("CAMERA_PASSWORD", "").strip("'\"")
+CAMERA_IP = os.getenv("CAMERA_IP", "").strip("'\"/")
+if CAMERA_IP.startswith("http://"):
+    CAMERA_IP = CAMERA_IP[7:]
+CAMERA_STREAM_PATH = os.getenv("CAMERA_STREAM_PATH", "").strip("'\"/")
 
-IP_CAMERA_URL = os.getenv("IP_CAMERA_URL", None)
+IP_CAMERA_URL = os.getenv("IP_CAMERA_URL", "").strip("'\"")
 
 if not IP_CAMERA_URL and CAMERA_IP:
     creds = ""

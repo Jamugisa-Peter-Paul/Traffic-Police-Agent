@@ -14,3 +14,4 @@ TRACKING_CONFIDENCE=0.5
 #DEVICE_MODE=cpu     force CPU
 #DEVICE_MODE=gpu     force GPU (falls back to CPU if unavailable)
 DEVICE_MODE=auto   # auto-detect (default)
+ESP8266_IP=192.168.43.227
