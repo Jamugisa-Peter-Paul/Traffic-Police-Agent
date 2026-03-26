@@ -122,6 +122,8 @@ def main():
                 hw_color = (0, 255, 0) if bridge.connected else (0, 0, 255)
                 cv2.putText(frame, hw_status, (10, 85), cv2.FONT_HERSHEY_PLAIN, 1, hw_color, 2)
 
+            frame = cv2.resize(frame, (1280, 720))
+            cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
             cv2.imshow(WINDOW_NAME, frame)
 
         key = cv2.waitKey(1) & 0xFF
