@@ -20,8 +20,17 @@ def main():
     try:
         cam = Camera(source).start()
     except ValueError as e:
-        print(f"Error: {e}")
-        return
+        if source != WEBCAM_INDEX:
+            print(f"⚠️  IP camera failed: {e}")
+            print(f"📷 Falling back to webcam (index {WEBCAM_INDEX})...")
+            try:
+                cam = Camera(WEBCAM_INDEX).start()
+            except ValueError as e2:
+                print(f"Error: Webcam also failed: {e2}")
+                return
+        else:
+            print(f"Error: {e}")
+            return
 
     # Initialize Modules
     detector = PoseDetector()
