@@ -46,9 +46,26 @@ print(f"⚡ Device: {DEVICE.upper()} | imgsz={JACKET_IMGSZ} | skip={DETECT_EVERY
 
 # ─── Camera Configuration ────────────────────────────────────────────────────
 # Priority:
-# 1. IP_CAMERA_URL (Full URL)
-# 2. Constructed URL from CAMERA_IP, CAMERA_USERNAME, CAMERA_PASSWORD
-# 3. WEBCAM_INDEX (Fallback)
+# 1. IP_CAMERA_URL (Full URL) — only if reachable
+# 2. Constructed URL from CAMERA_IP, CAMERA_USERNAME, CAMERA_PASSWORD — only if reachable
+# 3. WEBCAM_INDEX (Automatic fallback)
+
+import cv2 as _cv2
+
+def _test_camera_source(url, timeout=5):
+    """Try to open an IP camera stream. Returns True if it connects within timeout."""
+    try:
+        cap = _cv2.VideoCapture(url)
+        cap.set(_cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, timeout * 1000)
+        cap.set(_cv2.CAP_PROP_READ_TIMEOUT_MSEC, timeout * 1000)
+        if cap.isOpened():
+            grabbed, _ = cap.read()
+            cap.release()
+            return grabbed
+        cap.release()
+        return False
+    except Exception:
+        return False
 
 CAMERA_USERNAME = os.getenv("CAMERA_USERNAME", "").strip("'\"")
 CAMERA_PASSWORD = os.getenv("CAMERA_PASSWORD", "").strip("'\"")
@@ -69,6 +86,20 @@ if not IP_CAMERA_URL and CAMERA_IP:
         IP_CAMERA_URL += f"/{CAMERA_STREAM_PATH}"
 
 WEBCAM_INDEX = 0
+
+# ─── Auto-detect camera source ──────────────────────────────────────────────
+# Test if IP camera is reachable; if not, fall back to local webcam
+if IP_CAMERA_URL:
+    print(f"🔍 Testing IP camera connection: {IP_CAMERA_URL} ...")
+    if _test_camera_source(IP_CAMERA_URL):
+        CAMERA_SOURCE = IP_CAMERA_URL
+        print(f"✅ IP camera connected successfully.")
+    else:
+        CAMERA_SOURCE = WEBCAM_INDEX
+        print(f"⚠️  IP camera not reachable. Falling back to webcam (index {WEBCAM_INDEX}).")
+else:
+    CAMERA_SOURCE = WEBCAM_INDEX
+    print(f"📷 No IP camera configured. Using webcam (index {WEBCAM_INDEX}).")
 
 # ─── Window Configuration ────────────────────────────────────────────────────
 WINDOW_NAME = "Traffic Officer Agent"
