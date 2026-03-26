@@ -1,7 +1,7 @@
 import cv2
 import time
 from config import (
-    CAMERA_SOURCE, WINDOW_NAME,
+    IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME,
     JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD,
     DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES,
     HARDWARE_ENABLED, ESP8266_IP, ESP8266_PORT
@@ -13,8 +13,8 @@ from src.traffic_light import TrafficLight
 from src.jacket_detector import SafetyJacketDetector
 
 def main():
-    # Camera source is auto-resolved in config (IP camera if reachable, else webcam)
-    source = CAMERA_SOURCE
+    # Determine source: Priority to IP Camera if set
+    source = IP_CAMERA_URL if IP_CAMERA_URL else WEBCAM_INDEX
     print(f"Starting camera with source: {source}")
 
     try:
@@ -113,10 +113,6 @@ def main():
                 hw_color = (0, 255, 0) if bridge.connected else (0, 0, 255)
                 cv2.putText(frame, hw_status, (10, 85), cv2.FONT_HERSHEY_PLAIN, 1, hw_color, 2)
 
-            # Resize frame for a larger display window
-            frame = cv2.resize(frame, (1280, 720))
-            cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-            cv2.resizeWindow(WINDOW_NAME, 1280, 720)
             cv2.imshow(WINDOW_NAME, frame)
 
         key = cv2.waitKey(1) & 0xFF
