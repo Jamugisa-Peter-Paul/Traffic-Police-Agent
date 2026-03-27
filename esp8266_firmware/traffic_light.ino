@@ -24,9 +24,8 @@
 // ============================================================
 // CONFIGURATION — CHANGE THESE
 // ============================================================
-const char* WIFI_SSID     = "Jamugisa";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-
+const char* WIFI_SSID     = "Traffic";
+const char* WIFI_PASSWORD = "gulugoestoschool";
 // ============================================================
 // PIN DEFINITIONS (active LOW relays)
 // Using raw GPIO numbers for ESP8285/ESP8266 compatibility
@@ -229,10 +228,46 @@ void setup() {
 }
 
 // ============================================================
+// SERIAL COMMAND PARSING (USB fallback)
+// Accepts: SET:RED, SET:GREEN, SET:YELLOW, SET:OFF, STATUS
+// ============================================================
+void handleSerialCommands() {
+  if (!Serial.available()) return;
+
+  String cmd = Serial.readStringUntil('\n');
+  cmd.trim();
+  if (cmd.length() == 0) return;
+
+  if (cmd.startsWith("SET:")) {
+    String stateStr = cmd.substring(4);
+    LightState newState = stringToState(stateStr);
+
+    currentMode = MODE_MANUAL;
+    lastManualCommand = millis();
+    applyState(newState);
+
+    Serial.print("{\"mode\":\"MANUAL\",\"state\":\"");
+    Serial.print(stateToString(currentState));
+    Serial.println("\"}");
+  }
+  else if (cmd == "STATUS") {
+    Serial.print("{\"mode\":\"");
+    Serial.print(modeToString(currentMode));
+    Serial.print("\",\"state\":\"");
+    Serial.print(stateToString(currentState));
+    Serial.println("\"}");
+  }
+  else {
+    Serial.println("{\"error\":\"Unknown command\"}");
+  }
+}
+
+// ============================================================
 // MAIN LOOP
 // ============================================================
 void loop() {
   server.handleClient();
+  handleSerialCommands();
 
   unsigned long now = millis();
 

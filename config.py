@@ -81,8 +81,9 @@ TRACKING_CONFIDENCE = 0.5
 JACKET_MODEL_PATH = "models/best_jacket.pt"
 
 # Hardware Configuration (ESP8266 Traffic Light)
-# Set ESP8266_IP env variable to enable hardware control
-# e.g.  set ESP8266_IP=192.168.1.50
+# Priority: WiFi (ESP8266_IP) → USB Serial (auto-detect or ESP8266_SERIAL_PORT)
 ESP8266_IP = os.getenv("ESP8266_IP", None)
 ESP8266_PORT = int(os.getenv("ESP8266_PORT", "80"))
-HARDWARE_ENABLED = ESP8266_IP is not None
+ESP8266_SERIAL_PORT = os.getenv("ESP8266_SERIAL_PORT", None)  # e.g. COM3, /dev/ttyUSB0
+ESP8266_BAUD = int(os.getenv("ESP8266_BAUD", "115200"))
+HARDWARE_ENABLED = True  # Always try — WiFi first, then serial, then disabled

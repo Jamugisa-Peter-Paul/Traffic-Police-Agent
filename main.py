@@ -4,7 +4,8 @@ from config import (
     IP_CAMERA_URL, WEBCAM_INDEX, WINDOW_NAME,
     JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD,
     DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES,
-    HARDWARE_ENABLED, ESP8266_IP, ESP8266_PORT
+    HARDWARE_ENABLED, ESP8266_IP, ESP8266_PORT,
+    ESP8266_SERIAL_PORT, ESP8266_BAUD
 )
 from src.camera import Camera
 from src.detector import PoseDetector
@@ -51,14 +52,27 @@ def main():
     # FPS counter
     prev_time = time.time()
 
-    # Initialize Hardware Bridge (ESP8266) if configured
+    # Initialize Hardware Bridge (ESP8266)
+    # Priority: WiFi (HTTP) → USB Serial → No hardware
     bridge = None
     if HARDWARE_ENABLED:
-        from src.hardware_bridge import HardwareBridge
-        print(f"Hardware mode enabled — connecting to ESP8266 at {ESP8266_IP}:{ESP8266_PORT}")
-        bridge = HardwareBridge(ESP8266_IP, ESP8266_PORT)
-    else:
-        print("Hardware mode disabled — set ESP8266_IP env variable to enable")
+        if ESP8266_IP:
+            # Try WiFi first
+            from src.hardware_bridge import HardwareBridge
+            print(f"🌐 Trying WiFi bridge → ESP8266 at {ESP8266_IP}:{ESP8266_PORT}")
+            bridge = HardwareBridge(ESP8266_IP, ESP8266_PORT)
+            if not bridge.connected:
+                print("⚠️  WiFi bridge failed. Trying USB serial...")
+                bridge = None
+
+        if bridge is None:
+            # Try USB serial fallback
+            from src.serial_bridge import SerialBridge
+            print("🔌 Trying USB serial bridge...")
+            bridge = SerialBridge(port=ESP8266_SERIAL_PORT, baud=ESP8266_BAUD)
+            if not bridge.connected:
+                print("⚠️  No hardware connection available. Continuing without hardware.")
+                bridge = None
 
     while True:
         frame = cam.read()
