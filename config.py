@@ -80,6 +80,9 @@ TRACKING_CONFIDENCE = 0.5
 # ─── Safety Jacket Detection ─────────────────────────────────────────────────
 JACKET_MODEL_PATH = "models/best_jacket.pt"
 
+# ─── Display Configuration ───────────────────────────────────────────────────
+MIRROR_SCREEN = os.getenv("MIRROR_SCREEN", "false").lower() in ("true", "1", "yes")
+
 # Hardware Configuration (ESP8266 Traffic Light)
 # Priority: WiFi (ESP8266_IP) → USB Serial (auto-detect or ESP8266_SERIAL_PORT)
 ESP8266_IP = os.getenv("ESP8266_IP", None)

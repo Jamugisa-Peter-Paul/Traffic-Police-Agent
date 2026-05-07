@@ -5,7 +5,8 @@ from config import (
     JACKET_MODEL_PATH, JACKET_CONFIDENCE_THRESHOLD,
     DEVICE, JACKET_IMGSZ, DETECT_EVERY_N_FRAMES,
     HARDWARE_ENABLED, ESP8266_IP, ESP8266_PORT,
-    ESP8266_SERIAL_PORT, ESP8266_BAUD
+    ESP8266_SERIAL_PORT, ESP8266_BAUD,
+    MIRROR_SCREEN
 )
 from src.camera import Camera
 from src.detector import PoseDetector
@@ -78,6 +79,10 @@ def main():
         frame = cam.read()
 
         if frame is not None:
+            # Mirror the frame if enabled
+            if MIRROR_SCREEN:
+                frame = cv2.flip(frame, 1)
+
             frame_count += 1
 
             # 0. Detect Safety Jacket (skip frames on CPU for speed)
@@ -124,11 +129,54 @@ def main():
             cv2.putText(frame, f"FPS: {fps:.1f} | {DEVICE.upper()}", (10, 90),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
             
-            # Draw Traffic Light Indicator (Circle in top right)
+            # Draw Traffic Light Indicator (4 lights, vertical, top right)
             h, w, c = frame.shape
-            light_color = traffic_light.get_color()
-            cv2.circle(frame, (w - 50, 50), 30, light_color, cv2.FILLED)
-            cv2.putText(frame, light_state, (w - 80, 100), cv2.FONT_HERSHEY_PLAIN, 1, light_color, 2)
+            tl_x = w - 60  # Center X of traffic light
+            tl_top = 20    # Top of housing
+            radius = 18
+            spacing = 50
+            # Light positions: RED, YELLOW, BLUE, GREEN (top to bottom)
+            light_defs = [
+                ("RED",    (0, 0, 255)),
+                ("YELLOW", (0, 255, 255)),
+                ("BLUE",   (255, 100, 0)),
+                ("GREEN",  (0, 255, 0)),
+            ]
+            # Draw housing background
+            housing_h = spacing * len(light_defs) + 10
+            cv2.rectangle(frame, (tl_x - 28, tl_top), (tl_x + 28, tl_top + housing_h),
+                          (40, 40, 40), cv2.FILLED)
+            cv2.rectangle(frame, (tl_x - 28, tl_top), (tl_x + 28, tl_top + housing_h),
+                          (100, 100, 100), 2)
+            # Draw each light
+            for i, (name, color) in enumerate(light_defs):
+                cy = tl_top + 30 + i * spacing
+                if light_state == name:
+                    cv2.circle(frame, (tl_x, cy), radius, color, cv2.FILLED)
+                    cv2.circle(frame, (tl_x, cy), radius, (255, 255, 255), 2)
+                else:
+                    dim = tuple(v // 4 for v in color)
+                    cv2.circle(frame, (tl_x, cy), radius, dim, 2)
+            # Draw mode + state label
+            mode_label = traffic_light.mode
+            label_color = (0, 200, 255) if mode_label == "AUTO" else (200, 200, 200)
+            cv2.putText(frame, f"{mode_label}: {light_state}", (tl_x - 55, tl_top + housing_h + 25),
+                        cv2.FONT_HERSHEY_PLAIN, 1.2, label_color, 2)
+            # Draw countdown bar during auto-cycle
+            if traffic_light.mode == "AUTO":
+                elapsed, total = traffic_light.get_auto_progress()
+                bar_w = 56
+                bar_h = 8
+                bar_x = tl_x - 28
+                bar_y = tl_top + housing_h + 35
+                progress = elapsed / total if total > 0 else 0
+                cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (80, 80, 80), cv2.FILLED)
+                fill_w = int(bar_w * progress)
+                cv2.rectangle(frame, (bar_x, bar_y), (bar_x + fill_w, bar_y + bar_h),
+                              traffic_light.get_color(), cv2.FILLED)
+                remaining = max(0, total - elapsed)
+                cv2.putText(frame, f"{remaining:.1f}s", (bar_x + bar_w + 5, bar_y + bar_h),
+                            cv2.FONT_HERSHEY_PLAIN, 0.9, (200, 200, 200), 1)
 
             # Draw hardware connection status
             if bridge:

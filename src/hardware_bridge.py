@@ -57,6 +57,7 @@ class HardwareBridge:
             return
 
         # Don't send if gesture is NEUTRAL or UNKNOWN — let ESP auto-cycle
+        # But DO send during auto-cycle ("NO JACKET DETECTED") so lights stay in sync
         if gesture in ("NEUTRAL", "UNKNOWN"):
             self.last_sent_state = None  # Reset so next active gesture sends immediately
             return

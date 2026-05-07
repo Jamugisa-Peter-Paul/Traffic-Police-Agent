@@ -2,7 +2,7 @@
  * Traffic Light Controller — ESP8266
  * 
  * Dual-mode traffic light:
- *   AUTO mode:   Normal cycling  RED(30s) → GREEN(25s) → YELLOW(5s)
+ *   AUTO mode:   Normal cycling  RED(4s) → YELLOW(4s) → BLUE(4s) → GREEN(4s)
  *   MANUAL mode: Overridden by HTTP commands from the Python pose-detection app
  *                Returns to AUTO after 10s of no commands
  *
@@ -10,9 +10,10 @@
  *   D1 (GPIO5)  → Relay 1 → RED    bulb (AC 175-265V 5W)
  *   D2 (GPIO4)  → Relay 2 → YELLOW bulb
  *   D5 (GPIO14) → Relay 3 → GREEN  bulb
+ *   D6 (GPIO12) → Relay 4 → BLUE   bulb
  *
  * HTTP Endpoints:
- *   GET /set?state=RED|GREEN|YELLOW|OFF   → override to manual
+ *   GET /set?state=RED|GREEN|YELLOW|BLUE|OFF   → override to manual
  *   GET /status                           → JSON current state & mode
  *
  * ⚠️  CHANGE the WiFi credentials below before flashing!
@@ -33,20 +34,22 @@ const char* WIFI_PASSWORD = "gulugoestoschool";
 #define RED_PIN    5    // GPIO5  (labeled D1 on NodeMCU)
 #define YELLOW_PIN 4    // GPIO4  (labeled D2 on NodeMCU)
 #define GREEN_PIN  14   // GPIO14 (labeled D5 on NodeMCU)
+#define BLUE_PIN   12   // GPIO12 (labeled D6 on NodeMCU)
 
 // ============================================================
 // TIMING (milliseconds)
 // ============================================================
-#define RED_DURATION     30000   // 30 seconds
-#define GREEN_DURATION   25000   // 25 seconds
-#define YELLOW_DURATION   5000   //  5 seconds
+#define RED_DURATION      4000   //  4 seconds
+#define YELLOW_DURATION   4000   //  4 seconds
+#define BLUE_DURATION     4000   //  4 seconds
+#define GREEN_DURATION    4000   //  4 seconds
 
 #define MANUAL_TIMEOUT   10000   // Return to AUTO after 10s of no commands
 
 // ============================================================
 // STATE
 // ============================================================
-enum LightState { STATE_RED, STATE_YELLOW, STATE_GREEN, STATE_OFF };
+enum LightState { STATE_RED, STATE_YELLOW, STATE_BLUE, STATE_GREEN, STATE_OFF };
 enum Mode       { MODE_AUTO, MODE_MANUAL };
 
 LightState currentState = STATE_RED;
@@ -60,19 +63,21 @@ ESP8266WebServer server(80);
 // ============================================================
 // RELAY CONTROL
 // ============================================================
-void setRelays(bool red, bool yellow, bool green) {
+void setRelays(bool red, bool yellow, bool blue, bool green) {
   // Active HIGH: HIGH = relay ON, LOW = relay OFF
   digitalWrite(RED_PIN,    red    ? HIGH : LOW);
   digitalWrite(YELLOW_PIN, yellow ? HIGH : LOW);
+  digitalWrite(BLUE_PIN,   blue   ? HIGH : LOW);
   digitalWrite(GREEN_PIN,  green  ? HIGH : LOW);
 }
 
 void applyState(LightState state) {
   switch (state) {
-    case STATE_RED:    setRelays(true,  false, false); break;
-    case STATE_YELLOW: setRelays(false, true,  false); break;
-    case STATE_GREEN:  setRelays(false, false, true);  break;
-    case STATE_OFF:    setRelays(false, false, false); break;
+    case STATE_RED:    setRelays(true,  false, false, false); break;
+    case STATE_YELLOW: setRelays(false, true,  false, false); break;
+    case STATE_BLUE:   setRelays(false, false, true,  false); break;
+    case STATE_GREEN:  setRelays(false, false, false, true);  break;
+    case STATE_OFF:    setRelays(false, false, false, false); break;
   }
   currentState = state;
 }
@@ -83,17 +88,19 @@ void applyState(LightState state) {
 unsigned long getDuration(LightState state) {
   switch (state) {
     case STATE_RED:    return RED_DURATION;
-    case STATE_GREEN:  return GREEN_DURATION;
     case STATE_YELLOW: return YELLOW_DURATION;
+    case STATE_BLUE:   return BLUE_DURATION;
+    case STATE_GREEN:  return GREEN_DURATION;
     default:           return RED_DURATION;
   }
 }
 
 LightState getNextState(LightState state) {
   switch (state) {
-    case STATE_RED:    return STATE_GREEN;
-    case STATE_GREEN:  return STATE_YELLOW;
-    case STATE_YELLOW: return STATE_RED;
+    case STATE_RED:    return STATE_YELLOW;
+    case STATE_YELLOW: return STATE_BLUE;
+    case STATE_BLUE:   return STATE_GREEN;
+    case STATE_GREEN:  return STATE_RED;
     default:           return STATE_RED;
   }
 }
@@ -116,6 +123,7 @@ const char* stateToString(LightState s) {
   switch (s) {
     case STATE_RED:    return "RED";
     case STATE_YELLOW: return "YELLOW";
+    case STATE_BLUE:   return "BLUE";
     case STATE_GREEN:  return "GREEN";
     case STATE_OFF:    return "OFF";
     default:           return "UNKNOWN";
@@ -130,6 +138,7 @@ LightState stringToState(String s) {
   s.toUpperCase();
   if (s == "RED")    return STATE_RED;
   if (s == "YELLOW") return STATE_YELLOW;
+  if (s == "BLUE")   return STATE_BLUE;
   if (s == "GREEN")  return STATE_GREEN;
   if (s == "OFF")    return STATE_OFF;
   return STATE_RED;  // default fallback
@@ -188,10 +197,11 @@ void setup() {
   // Initialize relay pins
   pinMode(RED_PIN, OUTPUT);
   pinMode(YELLOW_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
 
   // Start with all OFF, then set RED
-  setRelays(false, false, false);
+  setRelays(false, false, false, false);
   delay(200);
   applyState(STATE_RED);
 
